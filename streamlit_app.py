@@ -145,12 +145,20 @@ if st.button("Run Analysis"):
     if uploaded_files:
         all_answers = {}
         for uploaded_file in uploaded_files:
-            with open(uploaded_file.name, "wb") as f:
-                f.write(uploaded_file.read())
-            answers = process_file_with_retries(uploaded_file.name)
-            all_answers[uploaded_file.name] = answers
+            progress_placeholder = st.empty()  # Platzhalter für den Fortschritt
+            with progress_placeholder:
+                with st.spinner(f"Processing {uploaded_file.name}..."):
+                    with open(uploaded_file.name, "wb") as f:
+                        f.write(uploaded_file.read())
+                    answers = process_file_with_retries(uploaded_file.name)
 
-        st.success("Analysis complete!")
+            if answers:
+                st.success(f"✔️ {uploaded_file.name} successfully processed!")
+                all_answers[uploaded_file.name] = answers
+            else:
+                st.error(f"❌ {uploaded_file.name} could not be processed.")
+
+        st.success("All analyses complete!")
         st.write("### Answers (Clean Text):")
         for file_name, answers in all_answers.items():
             st.write(f"#### {file_name}")
