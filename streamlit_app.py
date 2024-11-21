@@ -90,6 +90,28 @@ def run_assistant_and_get_response(assistant_id, user_message, file_id):
         traceback.print_exc()
         return []
 
+# Funktion zur Wiederholung des Tasks bei Fehlern
+def process_file_with_retries(file_name, max_retries=3):
+    retry_count = 0
+    while retry_count < max_retries:
+        st.info(f"Processing {file_name}, attempt {retry_count + 1}...")
+        file_id = upload_file(file_name)
+        if file_id and verify_file_access(file_id):
+            answers = run_assistant_and_get_response(ASSISTANT_ID, DEFAULT_MESSAGE, file_id)
+            delete_file(file_id)
+
+            # Prüfen, ob vernünftige Ergebnisse vorliegen
+            if answers and any(len(answer.strip()) > 10 for answer in answers):  # Mindesttextlänge prüfen
+                return answers
+            else:
+                st.warning(f"Analysis for {file_name} returned insufficient results. Retrying...")
+        else:
+            st.error(f"File upload or verification failed for {file_name}. Retrying...")
+        retry_count += 1
+
+    st.error(f"Failed to process {file_name} after {max_retries} attempts.")
+    return []
+
 # Streamlit App
 st.title("OpenAI PDF Analysis")
 
@@ -109,15 +131,9 @@ if st.button("Run Analysis"):
         for uploaded_file in uploaded_files:
             with open(uploaded_file.name, "wb") as f:
                 f.write(uploaded_file.read())
-            file_id = upload_file(uploaded_file.name)
-            if file_id and verify_file_access(file_id):
-                with st.spinner(f"Running analysis for {uploaded_file.name}..."):
-                    answers = run_assistant_and_get_response(ASSISTANT_ID, DEFAULT_MESSAGE, file_id)
-                all_answers[uploaded_file.name] = answers
-                delete_file(file_id)
-            else:
-                st.error(f"File upload or verification failed for {uploaded_file.name}.")
-        
+            answers = process_file_with_retries(uploaded_file.name)
+            all_answers[uploaded_file.name] = answers
+
         st.success("Analysis complete!")
         st.write("### Answers (Clean Text):")
         for file_name, answers in all_answers.items():
