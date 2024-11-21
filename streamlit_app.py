@@ -123,6 +123,8 @@ def is_valid_summary(answers):
         "manually analyze the document",
         "does not contain any text that can be searched",
         "any searchable text",
+        "try uploading it again",
+        "issue retrieving the content",
     ]
     for answer in answers:
         for phrase in invalid_phrases:
