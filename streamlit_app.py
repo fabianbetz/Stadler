@@ -122,6 +122,7 @@ def is_valid_summary(answers):
         "did not yield any results",
         "manually analyze the document",
         "does not contain any text that can be searched",
+        "any searchable text",
     ]
     for answer in answers:
         for phrase in invalid_phrases:
