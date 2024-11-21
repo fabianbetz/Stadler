@@ -1,15 +1,15 @@
 import streamlit as st
-import concurrent.futures
 from openai import OpenAI
 import traceback
 import time
 
-# Hole den API-Schlüssel aus den Streamlit-Secrets
+# Zugriff auf den API-Schlüssel aus Streamlit-Secrets
 api_key = st.secrets["OPENAI_API_KEY"]
 
 # OpenAI initialisieren
 client = OpenAI(api_key=api_key)
 
+# Funktionen
 def upload_file(file_path):
     try:
         with open(file_path, 'rb') as file:
@@ -67,13 +67,26 @@ def run_assistant_and_get_response(assistant_id, user_message, file_id):
 
         messages = client.beta.threads.messages.list(thread_id=thread.id)
         answers = [msg.content for msg in messages.data if msg.role == "assistant"]
-        return answers
+
+        # Extrahiere nur den reinen Text
+        plain_texts = []
+        for answer in answers:
+            if isinstance(answer, str):
+                plain_texts.append(answer)
+            elif isinstance(answer, list):
+                for item in answer:
+                    if isinstance(item, str):
+                        plain_texts.append(item)
+                    elif hasattr(item, "text") and hasattr(item.text, "value"):
+                        plain_texts.append(item.text.value)
+
+        return plain_texts
     except Exception as e:
         st.error(f"Error during assistant run: {e}")
         traceback.print_exc()
         return []
 
-# Streamlit app
+# Streamlit App
 st.title("OpenAI Assistant with File Upload")
 
 uploaded_file = st.file_uploader("Upload a PDF file", type="pdf")
@@ -89,7 +102,9 @@ if st.button("Run Analysis"):
             with st.spinner("Running analysis..."):
                 answers = run_assistant_and_get_response(assistant_id, user_message, file_id)
             st.success("Analysis complete!")
-            st.write("Answers:", answers)
+            st.write("### Answers (Clean Text):")
+            for answer in answers:
+                st.write(answer)
             delete_file(file_id)
         else:
             st.error("File upload or verification failed.")
