@@ -121,6 +121,7 @@ def is_valid_summary(answers):
         "re-upload the file",
         "did not yield any results",
         "manually analyze the document",
+        "does not contain any text that can be searched",
     ]
     for answer in answers:
         for phrase in invalid_phrases:
