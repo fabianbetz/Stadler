@@ -101,7 +101,7 @@ def process_file_with_retries(file_name, max_retries=3):
             delete_file(file_id)
 
             # Prüfen, ob vernünftige Ergebnisse vorliegen
-            if answers and any(len(answer.strip()) > 10 for answer in answers):  # Mindesttextlänge prüfen
+            if is_valid_summary(answers):
                 return answers
             else:
                 st.warning(f"Analysis for {file_name} returned insufficient results. Retrying...")
@@ -111,6 +111,22 @@ def process_file_with_retries(file_name, max_retries=3):
 
     st.error(f"Failed to process {file_name} after {max_retries} attempts.")
     return []
+
+# Funktion zur Validierung der Zusammenfassung
+def is_valid_summary(answers):
+    if not answers:
+        return False
+    invalid_phrases = [
+        "unable to access the contents of the PDF",
+        "re-upload the file",
+        "did not yield any results",
+        "manually analyze the document",
+    ]
+    for answer in answers:
+        for phrase in invalid_phrases:
+            if phrase in answer.lower():
+                return False
+    return any(len(answer.strip()) > 10 for answer in answers)  # Mindesttextlänge prüfen
 
 # Streamlit App
 st.title("OpenAI PDF Analysis")
