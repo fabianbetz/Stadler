@@ -9,6 +9,10 @@ api_key = st.secrets["OPENAI_API_KEY"]
 # OpenAI initialisieren
 client = OpenAI(api_key=api_key)
 
+# Feste Assistant-ID und Nachricht
+ASSISTANT_ID = "asst_pq3Mgw1G8cAoX2CtixU2wjL2"
+DEFAULT_MESSAGE = "Analyze the PDF following your instructions. Analyze the whole document. Execute your whole task."
+
 # Funktionen
 def upload_file(file_path):
     try:
@@ -87,26 +91,38 @@ def run_assistant_and_get_response(assistant_id, user_message, file_id):
         return []
 
 # Streamlit App
-st.title("OpenAI Assistant with File Upload")
+st.title("OpenAI PDF Analysis")
 
-uploaded_file = st.file_uploader("Upload a PDF file", type="pdf")
-user_message = st.text_area("Enter your message")
-assistant_id = st.text_input("Enter Assistant ID", value="asst_pq3Mgw1G8cAoX2CtixU2wjL2")
+# Beschreibung des Tools
+st.markdown(
+    """
+    **Dieser Chatbot analysiert PDF-Dokumente und erstellt eine übersichtliche und strukturierte Zusammenfassung.**
+    \nLaden Sie einfach Ihre Dateien hoch, und das Tool übernimmt den Rest!
+    """
+)
+
+uploaded_files = st.file_uploader("Upload multiple PDF files", type="pdf", accept_multiple_files=True)
 
 if st.button("Run Analysis"):
-    if uploaded_file and user_message and assistant_id:
-        with open("temp.pdf", "wb") as f:
-            f.write(uploaded_file.read())
-        file_id = upload_file("temp.pdf")
-        if file_id and verify_file_access(file_id):
-            with st.spinner("Running analysis..."):
-                answers = run_assistant_and_get_response(assistant_id, user_message, file_id)
-            st.success("Analysis complete!")
-            st.write("### Answers (Clean Text):")
+    if uploaded_files:
+        all_answers = {}
+        for uploaded_file in uploaded_files:
+            with open(uploaded_file.name, "wb") as f:
+                f.write(uploaded_file.read())
+            file_id = upload_file(uploaded_file.name)
+            if file_id and verify_file_access(file_id):
+                with st.spinner(f"Running analysis for {uploaded_file.name}..."):
+                    answers = run_assistant_and_get_response(ASSISTANT_ID, DEFAULT_MESSAGE, file_id)
+                all_answers[uploaded_file.name] = answers
+                delete_file(file_id)
+            else:
+                st.error(f"File upload or verification failed for {uploaded_file.name}.")
+        
+        st.success("Analysis complete!")
+        st.write("### Answers (Clean Text):")
+        for file_name, answers in all_answers.items():
+            st.write(f"#### {file_name}")
             for answer in answers:
                 st.write(answer)
-            delete_file(file_id)
-        else:
-            st.error("File upload or verification failed.")
     else:
-        st.error("Please provide all required inputs.")
+        st.error("Please upload at least one PDF file.")
